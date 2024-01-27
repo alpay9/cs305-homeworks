@@ -1,0 +1,56 @@
+    int curr_line = 1;
+    int commentDepth = 0;
+WHITESPACE [ \t\n]
+LOCALPART [a-zA-Z0-9\-_]+([.][a-zA-Z0-9\-_]+)*
+LABEL [a-zA-Z0-9]+|[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]
+DOMAIN {LABEL}([.]{LABEL}){1,2}
+%x COMMENT_ONELINE
+%x COMMENT_MULTILINE
+%%
+
+"/*" commentDepth = 1; BEGIN(COMMENT_MULTILINE);
+"//" BEGIN(COMMENT_ONELINE);
+"\n" curr_line++;
+
+<COMMENT_ONELINE>"\n" curr_line++; BEGIN(INITIAL);
+<COMMENT_ONELINE>.
+
+<COMMENT_MULTILINE>"/*" commentDepth++;
+<COMMENT_MULTILINE>"*/" if(--commentDepth == 0) BEGIN(INITIAL);
+<COMMENT_MULTILINE>"\n" curr_line++;
+<COMMENT_MULTILINE>.
+
+Mail printf("%d_tMAIL\n", curr_line);
+schedule printf("%d_tSCHEDULE\n", curr_line);
+end{WHITESPACE}+Mail printf("%d_tENDMAIL\n", curr_line); int j; for(j=0; j<yyleng; j++) if(yytext[j] == '\n') curr_line++;
+end{WHITESPACE}+schedule printf("%d_tENDSCHEDULE\n", curr_line); int k; for(k=0; k<yyleng; k++) if(yytext[k] == '\n') curr_line++;
+send printf("%d_tSEND\n", curr_line);
+to printf("%d_tTO\n", curr_line);
+from printf("%d_tFROM\n", curr_line);
+set printf("%d_tSET\n", curr_line);
+
+"," printf("%d_tCOMMA\n", curr_line);
+":" printf("%d_tCOLON\n", curr_line);
+"(" printf("%d_tLPR\n", curr_line);
+")" printf("%d_tRPR\n", curr_line);
+"[" printf("%d_tLBR\n", curr_line);
+"]" printf("%d_tRBR\n", curr_line);
+"@" printf("%d_tAT\n", curr_line);
+
+[a-zA-Z_][a-zA-Z0-9_]* printf("%d_tIDENT_(%s)\n", curr_line, yytext);
+\"[^"]*\" printf("%d_tSTRING_(%.*s)\n", curr_line, yyleng-2, yytext+1); int i; for(i=0; i<yyleng; i++) if(yytext[i] == '\n') curr_line++;
+{LOCALPART}@{DOMAIN} printf("%d_tADDRESS_(%s)\n", curr_line, yytext);
+[0-9]{2}"/"[0-9]{2}"/"[0-9]{4} |
+[0-9]{2}"-"[0-9]{2}"-"[0-9]{4} |
+[0-9]{2}"."[0-9]{2}"."[0-9]{4} printf("%d_tDATE_(Day_%.*s_Month_%.*s_Year_%.*s)\n", curr_line, 2, yytext, 2, yytext+3, 4, yytext+6);
+[0-9]{2}":"[0-9]{2} printf("%d_tTIME_(Hour_%.*s_Minute_%.*s)\n", curr_line, 2, yytext, 2, yytext+3);
+
+{WHITESPACE} 
+
+. printf("%d_ILLEGAL_CHARACTER_(%s)\n", curr_line, yytext);
+
+%%
+int main() {
+    yylex();
+    return(0);
+    }
